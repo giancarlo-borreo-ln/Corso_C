@@ -21,7 +21,7 @@ struct fract {
 struct fract *create_fraction(int num, int den){
     struct fract *f = malloc(sizeof(*f));
 
-    if(f == NULL) return NULL;
+    if(f == NULL) return NULL; //malloc error checking
 
 
     f->num = num;
@@ -32,7 +32,7 @@ struct fract *create_fraction(int num, int den){
 void simplify_fraction(struct fract *f){
     for(int d = 2; d <= f->num && d <= f->den; d++){
         while(f->num % d == 0 && 
-              f->den % d == 0)
+                f->den % d == 0)
         {
             f->num /= d;
             f->den /= d;
