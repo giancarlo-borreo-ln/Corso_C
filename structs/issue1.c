@@ -34,7 +34,10 @@ int main(void){
     struct pls s;
     s.len = 10;
     memcpy(s.str,"1234567890",11);
+    
+    printf("%p\n", &s);
     printf("%p\n", s.str);
+
     
     hexdump(&s, sizeof(s)-3);
 

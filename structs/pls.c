@@ -1,6 +1,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stddef.h>
+
+/* Value stored in the 'magic' field so we can recognise a valid header. */
+#define PLS_MAGIC 0x504C5300u /* 'PLS' */
+
+struct pls {
+    uint32_t len;
+    uint32_t refcount;
+    uint32_t magic;
+    char str[];
+};
+
+/* The functions return and accept a pointer to the first character of the
+ * string ('str'), which is convenient because it can be handed straight to
+ * any C function that expects a 'char *'. From that pointer we recover the
+ * header with this macro. */
+#define ps_header(s) ((struct pls *)((char *)(s) - offsetof(struct pls, str)))
 
 /* Using 'malloc()' this time
  * Initialise a prefixed length string with the specified
@@ -8,51 +25,66 @@
  *
  * The created strings have the following layout:
  *
- * +----+------------\\\
- * |LLLL|My strings here
- * +----+------------\\\
+ * +--------+----------+--------+-------------------+---\
+ * |  len   | refcount | magic  | str (len bytes)   |\0 |
+ * | 4 bytes| 4 bytes  | 4 bytes|                   |   |
+ * +--------+----------+--------+-------------------+---/
+ * \________________________________/
+ *          struct pls header
  *
- * Where L is the 4 unsigned bytes stating the total length of the string.
- * Thus, these strings are binary safe: zero bytes are permitted in the middle.
+ * Where 'len' is the 4 unsigned bytes stating the total length of the string,
+ * 'refcount' counts how many owners share the object and 'magic' identifies a
+ * valid header. 'str' is the flexible array member that holds the actual
+ * characters. Thus, these strings are binary safe: zero bytes are permitted in
+ * the middle.
  *
  * Warning: this function does not check for buffer overflows. */
 char *ps_create(char *init, int len) {
-    /* 4 bytes for the length, len bytes for the string and 1 for the
+    /* Space for the header struct, len bytes for the string and 1 for the
      * NULL terminator, so that the string is also a valid C string. */
-    char *s = malloc(4 + len + 1);
-    uint32_t *lenptr = (uint32_t *)s;
-    *lenptr = len;
+    struct pls *p = malloc(sizeof(struct pls) + len + 1);
+    if (p == NULL) return NULL;
 
-    /* Move the pointer past the header: from now on 's' points to the
-     * first character of the string, so it can be used by any C function. */
-    s += 4;
+    p->len = len;
+    p->refcount = 1;
+    p->magic = PLS_MAGIC;
+
     for (int j = 0; j < len; j++) {
-        s[j] = init[j]; // We should use memcpy() instead here.
+        p->str[j] = init[j]; // We should use memcpy() instead here.
     }
-    s[len] = 0;
-    return s;
+    p->str[len] = 0;
+
+    /* Return the pointer to the string, not to the header. */
+    return p->str;
 }
 
 /* Display the string 's' on the screen. */
 void ps_print(char *s) {
-    uint32_t *lenptr = (uint32_t *)(s - 4);
-    for (int j = 0; j < *lenptr; j++) {
-        putchar(s[j]);
+    struct pls *p = ps_header(s);
+    for (uint32_t j = 0; j < p->len; j++) {
+        putchar(p->str[j]);
     }
     printf("\n");
 }
 
-/* Free a previously created PS string. */
+/* Register another owner of the string and return it back. */
+char *ps_ref(char *s) {
+    struct pls *p = ps_header(s);
+    p->refcount++;
+    return s;
+}
+
+/* Free a previously created PS string. Since the object may be shared, the
+ * memory is released only when the last owner drops it. */
 void ps_free(char *s) {
-    /* free() wants the exact pointer returned by malloc(), and that
-     * pointer is 4 bytes before the string, where the header lives. */
-    free(s - 4);
+    struct pls *p = ps_header(s);
+    if (--p->refcount > 0) return;
+    free(p);
 }
 
 /* Return the length of the string in O(1) time. */
 uint32_t ps_len(char *s) {
-    uint32_t *lenptr = (uint32_t *)(s - 4);
-    return *lenptr;
+    return ps_header(s)->len;
 }
 
 char *global_string;
