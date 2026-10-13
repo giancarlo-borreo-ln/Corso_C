@@ -3,40 +3,26 @@
 #include <stdint.h>
 #include <stddef.h>
 
-/* Value stored in the 'magic' field so we can recognise a valid header. */
-#define PLS_MAGIC 0x504C5300u /* 'PLS' */
-
 struct pls {
     uint32_t len;
     uint32_t refcount;
     uint32_t magic;
     char str[];
 };
-
-/* The functions return and accept a pointer to the first character of the
- * string ('str'), which is convenient because it can be handed straight to
- * any C function that expects a 'char *'. From that pointer we recover the
- * header with this macro. */
-#define ps_header(s) ((struct pls *)((char *)(s) - offsetof(struct pls, str)))
-
-/* Using 'malloc()' this time
- * Initialise a prefixed length string with the specified
+/* Initialise a prefixed length string with the specified
  * string in 'init' of length 'len'.
  *
  * The created strings have the following layout:
  *
- * +--------+----------+--------+-------------------+---\
- * |  len   | refcount | magic  | str (len bytes)   |\0 |
- * | 4 bytes| 4 bytes  | 4 bytes|                   |   |
- * +--------+----------+--------+-------------------+---/
- * \________________________________/
- *          struct pls header
+ * +----+----+------------\\\
+ * |LLLL|CCCC|My strings here
+ * +----+----+------------\\\
  *
- * Where 'len' is the 4 unsigned bytes stating the total length of the string,
- * 'refcount' counts how many owners share the object and 'magic' identifies a
- * valid header. 'str' is the flexible array member that holds the actual
- * characters. Thus, these strings are binary safe: zero bytes are permitted in
- * the middle.
+ * Where L is the 4 unsigned bytes stating the total length 
+ * of the string
+ * and C is the 4 unsigned bytes counting how many owners share the string.
+ * Thus, these strings are binary safe: zero bytes are 
+ * permitted in the middle.
  *
  * Warning: this function does not check for buffer overflows. */
 char *ps_create(char *init, int len) {
@@ -47,7 +33,6 @@ char *ps_create(char *init, int len) {
 
     p->len = len;
     p->refcount = 1;
-    p->magic = PLS_MAGIC;
 
     for (int j = 0; j < len; j++) {
         p->str[j] = init[j]; // We should use memcpy() instead here.
