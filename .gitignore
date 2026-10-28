@@ -1,0 +1,21 @@
+# Executables / build output
+a.out
+*.o
+*.obj
+*.exe
+*.out
+
+# Debugging / profiling
+*.dSYM/
+*.gcda
+*.gcno
+*.gcov
+core
+vgcore.*
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
