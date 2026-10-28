@@ -1,21 +1,9 @@
 #include<stdio.h>
 
-int fattoriale(int n)
-{
-	int res = 1;
-
-	if(n == 0) 
-	{
-		res=1;
-	}
-	else
-	{
-
-		res =n * fattoriale(n-1);
-	}
-
-	return res;
-	
+int fattoriale(int n){
+    if(n==0) return 1;
+   
+    return n * fattoriale(n-1);
 }
 
 int main(void)

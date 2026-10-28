@@ -1,5 +1,7 @@
 #include<stdio.h>
 #include<ctype.h>
+#include<fcntl.h>
+
 
 #define HEXDUMP_CHARS_PER_LINE 16
 void hexdump(void *p, size_t len) {
@@ -27,8 +29,7 @@ void hexdump(void *p, size_t len) {
 
 
 int main(void){
-    FILE *fp = fopen("stdio1.c","r");
-    
+    FILE *fp = fopen("stdio1.c","r"); 
     if(fp == NULL) {
         printf("Unable to open the file\n");
         return 1;
@@ -42,7 +43,6 @@ int main(void){
         if(nread == 0) break;
         hexdump(buf,nread);
     }
-    
-    
     fclose(fp);
+    return 0;
 }
